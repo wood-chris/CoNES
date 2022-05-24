@@ -1,0 +1,89 @@
+Bootstrap: library
+From: ubuntu:21.04
+
+####
+#
+# Authors:      Chris Wood, EPCC, University of Edinburgh <c.wood@epcc.ed.ac.uk>
+# Authors:      James Harle, National Oceanography Centre <jdha@noc.ac.uk>
+# Date:         2021-11-30
+# Last updated: 2021-11-30
+# 
+# Definition file for base OS used to create NEMO/XIOS Singularity Containers
+#
+####
+
+%post
+
+    ##
+    # install base OS
+    ##
+
+    apt-get -y update
+    apt install -y locales 
+    locale-gen en_GB en_GB.UTF-8
+
+    apt install -y software-properties-common
+    add-apt-repository universe
+    apt update
+
+    ##
+    #  add required packages
+    ##
+     
+    apt install -y python \
+                   subversion \
+                   wget \
+                   git \
+                   make \
+                   m4 \
+                   gcc-10 \
+                   gfortran-10 \
+                   g++-10 \
+
+    ##
+    # make gcc-10 available
+    ##
+     
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-10 100
+    ln -s /usr/bin/cpp-10 /usr/bin/cpp
+
+    ##
+    # clean up base build
+    ##
+     
+    apt clean
+
+    ##
+    # make user `nemo` - mpiexec in hdf5 `make check` complains if run as root (although we're not running it at the moment)
+    ##
+
+    adduser --disabled-password --gecos "" nemo
+
+    ###
+    # softlink gmake to make
+    ###
+
+    ln -s /usr/bin/make /usr/bin/gmake
+
+    ##
+    # compiling MPI
+    ##
+
+
+%labels
+    Author c.wood@epcc.ed.ac.uk
+    Author jdha@noc.ac.uk
+    Version v0.0.1
+
+%help
+    The definition file used to create this container builds the base OS for NEMO, XIOS, and the following dependencies from source:
+        - OpenMPI (4.0.1) / MPICH (3.4.2)
+        - HDF5 (1.10.5)
+        - NetCDF C (4.7.1) and Fortran (4.5.2) libraries 
+
+    This container 
+
+    To build the container, run
+
+        singularity build nemo_base_OS.sif Singularity.nemo_baseOS
