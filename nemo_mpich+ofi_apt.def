@@ -53,7 +53,7 @@ From: ubuntu:21.04
                    libcurl4-openssl-dev \
                    curl \
                    zlib1g-dev \
-                   libnuma-dev 
+                   libfabric-dev
 
     ##
     # make gcc-10 available
@@ -89,7 +89,7 @@ From: ubuntu:21.04
     rm mpich-3.4.2.tar.gz
     cd mpi
 
-    ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-device=ch4:ucx
+    ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-device=ch4:ofi
     make
     make install
 
