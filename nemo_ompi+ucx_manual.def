@@ -83,14 +83,19 @@ From: ubuntu:21.04
     cd $MPI_DIR
     mkdir mpi
 
-    wget http://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz
-    tar -xvzf mpich-3.4.2.tar.gz -C mpi --strip-components 1
-    rm mpich-3.4.2.tar.gz
+    wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.1.tar.bz2
+    tar -xvjf openmpi-4.1.1.tar.bz2 -C mpi --strip-components 1
+    rm openmpi-4.1.1.tar.bz2
     cd mpi
 
 
     # This step needs to be done on archer2 with libfabric bound: -B /opt/cray/libfabric/1.11.0.4.71:/opt/libfabric (i.e. copy the sandbox to archer, shell in, build mpich, exit, copy the sandbox back to the vm) 
-    ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-libfabric=/opt/libfabric
+
+    # ... note: libnuma-dev needs to be installed, configuration complains if --with-pmix is given, and complains if --with-device=ch4:ucx is not given (even with --with-ucx)
+
+    apt install -y libnuma-dev
+
+    ./configure CC=gcc CXX=g++ FC=gfortran FFLAGS=-fallow-argument-mismatch --prefix=/opt/mpi/install --with-ucx=/opt/ucx --with-device=ch4:ucx --with-slurm
     make
     make install
 
