@@ -83,12 +83,16 @@ From: ubuntu:21.04
     cd $MPI_DIR
     mkdir mpi
 
-    wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.1.tar.bz2
-    tar -xvjf openmpi-4.1.1.tar.bz2 -C mpi --strip-components 1
-    rm openmpi-4.1.1.tar.bz2
+    wget http://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz
+    tar -xvzf mpich-3.4.2.tar.gz -C mpi --strip-components 1
+    rm mpich-3.4.2.tar.gz
     cd mpi
+
+
+    # mpich complains if there's no transport layer specified, so because this container is trying to see the effect of not specifying a transport layer let's just
+    # set the default one of ch3 
     
-    ./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-slurm --with-pmix
+    ./configure CC=gcc CXX=g++ FC=gfortran FFLAGS=-fallow-argument-mismatch --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-device=ch3
     make
     make install
 
