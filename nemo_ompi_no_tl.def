@@ -52,9 +52,7 @@ From: ubuntu:21.04
                    liburi-perl \
                    libcurl4-openssl-dev \
                    curl \
-                   zlib1g-dev \
-                   libfabric-dev \
-                   libibverbs-dev
+                   zlib1g-dev 
 
     ##
     # make gcc-10 available
@@ -90,7 +88,7 @@ From: ubuntu:21.04
     rm openmpi-4.1.1.tar.bz2
     cd mpi
     
-    ./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-verbs --with-slurm --with-pmix --with-ofi
+    ./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-slurm --with-pmix
     make
     make install
 
