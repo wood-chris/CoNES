@@ -1,5 +1,5 @@
 Bootstrap: library
-From: ubuntu:20.04
+From: ubuntu:22.04
 
 ####
 #
@@ -34,7 +34,7 @@ From: ubuntu:20.04
     #  add required packages
     ##
      
-    apt install -y python \
+    apt install -y python-is-python3 \
                    subversion \
                    wget \
                    git \
@@ -46,11 +46,20 @@ From: ubuntu:20.04
                    liburi-perl \
                    libcurl4-openssl-dev \
                    curl \
-                   zlib1g-dev \
-                   libibverbs-dev \
-                   libpmix-dev \
-                   libslurm-dev \
-                   libnuma-dev 
+                   zlib1g-dev
+                   
+                   
+                    \
+
+
+
+                   libibverbs-dev \ 
+                   
+                   libfabric-dev
+                   
+                   #libpmix-dev \
+                   #libslurm-dev \
+                   #libnuma-dev # only necessary for mpich + ucx    
 
     ##
     # make gcc-10 available
@@ -76,7 +85,8 @@ From: ubuntu:20.04
     # softlink gmake to make
     ###
 
-    ln -s /usr/bin/make /usr/bin/gmake
+# not needed in ubuntu 21.04
+#    ln -s /usr/bin/make /usr/bin/gmake
 
     ##
     # compiling MPI
@@ -108,7 +118,24 @@ From: ubuntu:20.04
         cd mpi
 
         #./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch
-        ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-device=ch4:ucx
+#        ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --       
+
+
+        # needs to be done on archer2 with libfabric bound: -B /opt/cray/libfabric/1.11.0.4.71:/opt/libfabric
+        ./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-libfabric=/opt/libfabric && make && make install
+
+
+./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch --with-ucx=/opt/ucx/ --with-device=ch4:ucx
+
+
+
+
+
+        #./configure CC=gcc CXX=g++ FC=gfortran --prefix=/opt/mpi/install FFLAGS=-fallow-argument-mismatch 
+        
+        
+        --with-device=ch4:ofi
+
         make
         make install
 
@@ -133,7 +160,13 @@ From: ubuntu:20.04
         cd mpi
         
         #./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-verbs --with-slurm --with-pmix --with-ucx=/opt/ucx/install
-        ./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-verbs --with-slurm --with-pmix
+        #./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-verbs --with-slurm --with-pmix --with-ofi
+
+
+
+./configure CC=gcc CXX=g++ FC=gfortran --enable-mpi1-compatibility --prefix=/opt/mpi/install --with-slurm --with-pmix --with-ofi-libdir=/opt/cray/libfabric/1.11.0.4.71/lib64/
+
+
         make
         make install
     else
@@ -160,6 +193,9 @@ From: ubuntu:20.04
     cd hdf
 
     CC=/opt/mpi/install/bin/mpicc ./configure --prefix=${H5DIR} --enable-hl --enable-parallel --with-default-api-version=v18
+
+    CC=/opt/bin/cc ./configure --prefix=${H5DIR} --enable-hl --enable-parallel --with-default-api-version=v18
+
     make
     make install
     cd .. 
@@ -169,16 +205,16 @@ From: ubuntu:20.04
     # compile NetCDF libraries
     ##
 
-    NETCDF_DIR=/opt/netcdf
-    mkdir -p $NETCDF_DIR
-    cd $NETCDF_DIR 
+        NETCDF_DIR=/opt/netcdf
+        mkdir -p $NETCDF_DIR
+        cd $NETCDF_DIR 
 
-    # C libraries...
-    wget -O netcdf.tar.gz https://github.com/Unidata/netcdf-c/archive/v4.8.0.tar.gz
-    mkdir netcdf
-    tar xzvf netcdf.tar.gz -C netcdf --strip-components 1
-    rm netcdf.tar.gz 
-    
+        # C libraries...
+        wget -O netcdf.tar.gz https://github.com/Unidata/netcdf-c/archive/v4.8.0.tar.gz
+        mkdir netcdf
+        tar xzvf netcdf.tar.gz -C netcdf --strip-components 1
+        rm netcdf.tar.gz 
+        
     cd netcdf
     NCDIR=/opt/netcdf/install
     
@@ -202,7 +238,11 @@ From: ubuntu:20.04
     cd ..
     rm -r netcdf # removes the 18 mb directory
 
-    ln -s /opt/mpi/install/bin/mpif90 /usr/bin/mpif90
+    #ln -s /opt/mpi/install/bin/mpif90 /usr/bin/mpif90
+
+    ln -s /opt/mpi/install/bin/ftn /usr/bin/mpif90
+    ln -s /opt/mpi/install/bin/cc /usr/bin/mpicc
+
 
     WORK_DIR=/nemo >> $SINGULARITY_ENVIRONMENT
     mkdir $WORK_DIR
@@ -223,6 +263,94 @@ From: ubuntu:20.04
     chmod -Rv 755 /opt
 
     rm -rf /var/lib/apt/lists/* /var/lib/dpkg/info/*
+
+
+# need to create /host/pe_pkgcfg
+
+
+mkdir -p {/opt/cray/pe/craype/2.7.6/,/opt/cray/pe/hdf5/1.12.0.3/crayclang/9.1,/opt/cray/pe/netcdf/4.7.4.3/crayclang/9.1,/input_files,/host/usr/bin,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib,/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib,/opt/cray/pe/cce/11.0.4,/opt/cray/xpmem/2.2.40-7.0.1.0_2.7__g1d7a24d.shasta/lib64,/opt/cray/libfabric/1.11.0.4.71/lib64,/opt/gcc/10.2.0/snos/include/g++,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/include,/opt/cray/pe/netcdf/4.7.4.3,/opt/cray/pe/netcdf-hdf5parallel/4.7.4.3,/opt/cray/pe/parallel-netcdf/1.12.1.3/,/opt/cray/pe/lib64,/opt/gcc/8.1.0,/opt/cray/pe/gcc/mpfr/3.1.4,/host/usr/lib64,/host/lib64,/host/local,/opt/cray/pe/pmi/,/host/usr/bin}
+
+# mkdir -p /opt/cray/pe/pmi/  
+# mkdir /host/local
+
+/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib/pkgconfig
+/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib
+
+/opt/cray/pe/cce/13.0.2/cce/x86_64/lib/pkgconfig/
+
+PATH=$PATH:/opt/mpi/install/bin:/opt/hdf5/install/crayclang/9.1/bin:/host/bin
+
+            :/opt/netcdf/install/crayclang/9.1/bin
+
+#PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/host/libfabric_pkgcfg:/host/mpich_pkgcfg:/host/libsci_pkgcfg:/host/pc_pkgcfg
+
+#PKG_CONFIG_PATH=/opt/libfabric_pkgcfg:/host/mpich_pkgcfg:/host/libsci_pkgcfg:/host/pc_pkgcfg
+
+PKG_CONFIG_PATH=/opt/cce_pkgcfg/pkgconfig:/opt/libsci_pkgcfg/pkgconfig:/opt/mpich_pkgcfg/pkgconfig
+
+
+# singularity shell -B /opt/cray/pe/craype/2.7.6:/opt/mpi/install,/opt/cray/pe/hdf5-parallel/1.12.0.3:/opt/hdf5/install,/opt/cray/pe/parallel-netcdf/1.12.1.3:/opt/netcdf/install,/home/ecseab13/ecseab13/ccwcones/CoNES/input_files:/input_files,/usr/bin:/host/bin,/opt/cray/libfabric/1.11.0.4.71/lib64/pkgconfig:/host/pkgcfg -w intermediate.simg
+
+
+# export LD_LIBRARY_PATH=/opt/hdf5/install/crayclang/9.1/lib:$LD_LIBRARY_PATH
+
+# arch files in CoNES container have changed - needs branching / committing / documenting
+
+
+/opt/cray/xpmem/2.2.40-7.0.1.0_2.7__g1d7a24d.shasta/lib64/
+
+singularity shell -B /opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib/pkgconfig:/host/mpich_pkgcfg -w intermediate.simg
+
+singularity shell -B /opt/cray/pe/craype/2.7.6:/opt/mpi/install,/opt/cray/pe/hdf5-parallel/1.12.0.3:/opt/hdf5/install,/opt/cray/pe/parallel-netcdf/1.12.1.3:/opt/netcdf/install,/home/ecseab13/ecseab13/ccwcones/CoNES/input_files:/input_files,/usr/bin:/host/bin,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib/pkgconfig:/host/mpich_pkgcfg,/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib:/host/libsci_pkgcfg,/opt/cray/pe/cce/13.0.2/cce/x86_64/lib:/opt/pc_pkgcfg -w intermediate.sim
+
+PATH=/host/bin:/opt/cray/pe/cce/11.0.4/cce-clang/x86_64/bin:/opt/cray/pe/craype/2.7.6/bin:/opt/cray/pe/hdf5-parallel/1.12.0.3/crayclang/9.1/bin:$PATH
+
+
+
+LD_LIBRARY_PATH=/opt/cray/pe/cce/11.0.4/cce-clang/x86_64/lib:/opt/cray/pe/hdf5-parallel/1.12.0.3/crayclang/9.1/lib:$LD_LIBRARY_PATH
+
+
+
+ln -s /host/usr/lib64/libcurl.so /usr/lib64/ -v
+ln -s /host/usr/lib64/libz.so /usr/lib64/ -v
+ln -s /host/usr/lib64/libdl.so /usr/lib64/ -v
+ln -s /host/usr/lib64/libpthread.so /usr/lib64/ -v
+ln -s /host/usr/lib64/libc.so /usr/lib64/ -v
+ln -s /host/usr/lib64/libm.so /usr/lib64/ -v
+ln -sv /host/lib64/libz.so.1.2.11 /lib64/ -v
+ln -sv /host/lib64/libdl.so.2 /lib64/ -v
+ln -sv /host/lib64/libpthread.so.0 /lib64/ -v
+ln -sv /host/usr/lib64/libpthread_nonshared.a /usr/lib64/ -v
+ln -sv /host/lib64/libc.so.6 /lib64/ -v
+ln -sv /host/usr/lib64/libc_nonshared.a /usr/lib64/ -v
+ln -sv /host/lib64/libm.so.6 /lib64/ -v
+ln -sv /host//usr/lib64/libmvec_nonshared.a /usr/lib64/ -v
+ln -sv /host/lib64/libmvec.so.1 /lib64/ -v
+ln -sv /host/usr/lib64/libibverbs.so.1 /usr/lib64/ -v
+ln -sv /host/usr/lib64/librdmacm.so.1 /usr/lib64/ -v
+ln -sv /host/usr/lib64/libnl-3.so.200 /usr/lib64/ -v
+ln -sv /host/usr/lib64/libnl-route-3.so.200 /usr/lib64/ -v
+ln -sv /host/usr/lib64/libatomic.so.1 /usr/lib64/ -v
+ln -sv /host/lib64/librt.so.1 /lib64/ -v
+ln -sv /host/usr/lib64/libpals.so.0 /usr/lib64/ -v
+ln -sv /host/usr/bin/{gcc,gfortran,gmake} /host/local/ -v
+
+export LD_LIBRARY_PATH=/host/usr/lib64:/opt/cray/pe/cce/11.0.4/cce-clang/x86_64/lib:/opt/cray/pe/hdf5-parallel/1.12.0.3/crayclang/9.1/lib:/opt/cray/pe/cce/11.0.4/cce/x86_64/lib:/opt/cray/pe/gcc/mpfr/3.1.4/lib:/opt/cray/libfabric/1.11.0.4.71/lib64:/opt/cray/pe/pmi/6.0.10/lib:/.singularity.d/libs:/usr/lib/x86_64-linux-gnu:/usr/lib64:/lib64  
+
+export PATH=/host/local:/opt/cray/pe/cce/11.0.4/cce-clang/x86_64/bin:/opt/cray/pe/craype/2.7.6/bin:/opt/cray/pe/hdf5-parallel/1.12.0.3/crayclang/9.1/bin:$PATH:/host/usr/bin
+export CPLUS_INCLUDE_PATH=/opt/gcc/10.2.0/snos/include/g++:/opt/gcc/10.2.0/snos/include/g++/x86_64-suse-linux:/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/include:/opt/cray/pe/netcdf-hdf5parallel/4.7.4.3/crayclang/9.1/include/
+export PKG_CONFIG_PATH=/opt/cray/pe/cce/11.0.4/cce/x86_64/lib/pkgconfig:/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib/pkgconfig:/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib/pkgconfig:/opt/cray/xpmem/2.2.40-7.0.1.0_2.7__g1d7a24d.shasta/lib64/pkgconfig:/opt/cray/libfabric/1.11.0.4.71/lib64/pkgconfig
+
+singularity shell -B //opt/cray/pe/craype/2.7.6/,/opt/cray/pe/hdf5-parallel/1.12.0.3,/opt/cray/pe/parallel-netcdf/1.12.1.3,/home/ecseab13/ecseab13/ccwcones/CoNES/input_files:/input_files,/usr/bin:/host/bin,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib,/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib,/opt/cray/pe/cce/11.0.4,/opt/cray/xpmem/2.2.40-7.0.1.0_2.7__g1d7a24d.shasta/lib64:/opt/cray/libfabric/1.11.0.4.71/lib64/ -w intermediate.simg
+
+/opt/cray/pe/hdf5-parallel/1.12.0.3/crayclang/9.1/
+/opt/cray/pe/parallel-netcdf/1.12.1.3/crayclang/9.1/
+
+
+
+singularity shell -B /opt/cray/pe/craype/2.7.6/,/opt/cray/pe/hdf5/1.12.0.3/crayclang/9.1,/opt/cray/pe/netcdf/4.7.4.3/crayclang/9.1,/home/ecseab13/ecseab13/ccwcones/CoNES/input_files:/input_files,/usr/bin:/host/bin,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib,/opt/cray/pe/libsci/21.04.1.1/CRAY/9.0/x86_64/lib,/opt/cray/pe/cce/11.0.4,/opt/cray/xpmem/2.2.40-7.0.1.0_2.7__g1d7a24d.shasta/lib64,/opt/cray/libfabric/1.11.0.4.71/lib64,/opt/gcc/10.2.0/snos/include/g++,/opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/include,/opt/cray/pe/netcdf/4.7.4.3,/opt/cray/pe/netcdf-hdf5parallel/4.7.4.3,/opt/cray/pe/lib64,/opt/gcc/8.1.0,/opt/cray/pe/gcc/mpfr/3.1.4 -w intermediate.simg
+
+ftn -o xios_server.exe /nemo/xios/obj/server_main.o -L/nemo/xios/lib -l__fcm__xios_server -L /opt/cray/pe/netcdf/4.7.4.3/crayclang/9.1/lib -L /opt/cray/pe/hdf5/1.12.0.3/crayclang/9.1/lib -L /opt/cray/pe/mpich/8.1.4/ofi/crayclang/9.1/lib -L /usr/lib/x86_64-linux-gnu/ -L /opt/cray/ -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lhdf5 -lz -lcurl -lcurl -lstdc++
 
 %environment
     
