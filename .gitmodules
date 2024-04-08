@@ -1,0 +1,3 @@
+[submodule "HPC_Scaling_AMM7"]
+	path = HPC_Scaling_AMM7
+	url = git@github.com:NOC-MSM/HPC_Scaling_AMM7.git
